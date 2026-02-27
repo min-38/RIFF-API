@@ -1,13 +1,27 @@
-using MailKit.Net.Smtp;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
+using MailKit.Net.Smtp;
+using Riff.Api.Data;
+using Riff.Api.Data.Repositories;
+using Riff.Api.Features.Auth;
+using Riff.Api.Features.Auth.Signup;
+using Riff.Api.Features.Captcha;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
+builder.Services
+    .AddOptions<TurnstileOptions>()
+    .Bind(builder.Configuration.GetSection(TurnstileOptions.SectionName));
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<ICaptchaService, CaptchaService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ISignupService, SignupService>();
 
 var hc = builder.Services.AddHealthChecks();
 
@@ -64,6 +78,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.MapAuthEndpoints();
 
 var summaries = new[]
 {
